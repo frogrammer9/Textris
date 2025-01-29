@@ -1,1 +1,1 @@
-#Tetris that You can ran in the terminal
+Tetris that You can ran in the terminal
