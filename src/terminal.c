@@ -33,7 +33,7 @@ static void handle_sigtstp([[maybe_unused]] int sig) {
 static void terminal_restore() {
 	int res = tcsetattr(STDIN_FILENO, TCSANOW, &term_old);
 	if(res < 0) { perror("tcsetattr failed"); }
-	const char* str = "\e[?25h";
+	const char* str = "\e[39m\e[49m\e[H\e[J\e[?25h";
 	write(STDOUT_FILENO, str, strlen(str));
 }
 
@@ -66,5 +66,13 @@ int terminal_setup(uint32_t* charC_out, uint32_t* lineC_out) {
 	int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
 	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 	return 0;
+}
+
+void setchar(uint32_t x, uint32_t y, const char* fore, const char* back, char c) {
+	printf("\033[%d;%dH%s%s%c", y, x, fore, back, c);
+}
+
+void setstr(uint32_t x, uint32_t y, const char* fore, const char* back, const char* s) {
+	printf("\033[%d;%dH%s%s%s", y, x, fore, back, s);
 }
 
