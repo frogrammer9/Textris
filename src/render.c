@@ -2,36 +2,16 @@
 #include "terminal.h"
 #include <string.h>
 
-cell bitmap[20][10]; 
-
-[[maybe_unused]] static char color_f[17][7] = {
-	DEFAULT_F, BLACK_F, DARK_RED_F,
-    DARK_GREEN_F, DARK_YELLOW_F, DARK_BLUE_F,
-    DARK_MAGENTA_F, DARK_CYAN_F, LIGHT_GRAY_F,
-    DARK_GRAY_F, RED_F, GREEN_F,
-    ORANGE_F, BLUE_F, MAGENTA_F,
-    CYAN_F, WHITE_F			
-};
-
-[[maybe_unused]] static char color_b[17][7] = {
-	DEFAULT_B, BLACK_B,	DARK_RED_B,
-	DARK_GREEN_B, DARK_YELLOW_B, DARK_BLUE_B,
-	DARK_MAGENTA_B, DARK_CYAN_B, LIGHT_GRAY_B,
-	DARK_GRAY_B, RED_B, GREEN_B,
-	ORANGE_B, BLUE_B, MAGENTA_B,
-	CYAN_B, WHITE_B,
-};
+cell bitmap[200]; 
+cell bitmap_copy[200]; 
 
 static uint8_t charC = 0, lineC = 0, scale = 0;
 
 int render_init(uint8_t s, uint8_t cC, uint8_t lC) {
-	for(uint8_t i = 0; i < 20; ++i) {
-		memset(bitmap[i], 0, 10 * sizeof(cell));
-	}
-	for(uint8_t y = 0; y < 20; ++y) {
-		for(uint8_t x = 0; x < 10; ++x) {
-			bitmap[y][x].c = '2';
-		}
+	for(uint8_t i = 0; i < 200; ++i) {
+			bitmap[i].c = ' ';
+			bitmap[i].colb = DEFAULT_B;
+			bitmap[i].colf = DEFAULT_F;
 	}
 	charC = cC, lineC = lC,  scale = s;
 	return 0;
@@ -61,11 +41,23 @@ void draw_border() {
 
 void draw_bitmap() { 
 	uint32_t midx = ((charC - ((20 << scale) + 3)) >> 1) + 1;
-	uint32_t midy = ((lineC - ((20 << scale) + 2)) >> 1) + 1;
+	uint32_t midy = ((lineC - ((20 << scale) + 2)) >> 1) + 1 + scale;
 	for(uint8_t y = 0; y < 20; ++y) {
 		for(uint8_t x = 0; x < 10; ++x) {
-			//setchar(midx + x, midy + y, color_f[bitmap[y][x].colf], color_b[bitmap[y][x].colb], bitmap[y][x].c);
-			setchar(midx + x, midy + y, DEFAULT_F, DEFAULT_B, bitmap[y][x].c);
+			if(bitmap[10 * y + x].c != bitmap_copy[10 * y + x].c ||
+				bitmap[10 * y + x].colb != bitmap_copy[10 * y + x].colb ||
+				bitmap[10 * y + x].colf != bitmap_copy[10 * y + x].colf) {
+				if(scale) {
+					setchar(midx + x * 2 + 1, midy + y * 2		, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+					setchar(midx + x * 2	, midy + y * 2 + 1	, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+					setchar(midx + x * 2 + 1, midy + y * 2 + 1	, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+					setchar(midx + x * 2	, midy + y * 2		, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+				}
+				else setchar(midx + x, midy + y, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+				bitmap_copy[10 * y + x].c = bitmap[10 * y + x].c;
+				bitmap_copy[10 * y + x].colb = bitmap[10 * y + x].colb;
+				bitmap_copy[10 * y + x].colf = bitmap[10 * y + x].colf;
+			}
 		}
 	}
 }

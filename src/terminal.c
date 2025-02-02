@@ -75,10 +75,10 @@ int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out, uint8_t* draw_frame_f
 }
 
 void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c) {
-	printf("\033[%d;%dH%s%s%c", y, x, fore, back, c);
+	printf("\e[%d;%dH%s%s%c", y, x, fore, back, c);
 }
 
 void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s) {
-	printf("\033[%d;%dH%s%s%s", y, x, fore, back, s);
+	printf("\e[%d;%dH%s%s%s", y, x, fore, back, s);
 }
 
