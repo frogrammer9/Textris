@@ -10,6 +10,8 @@
 
 static struct termios term_old, term_new;
 
+static uint8_t* draw_frame = 0;
+
 static void handle_exitsig([[maybe_unused]] int sig) {
 	_exit(0);
 }
@@ -19,6 +21,7 @@ static void handle_sigcont([[maybe_unused]] int sig) {
 	if(res < 0) { perror("tcsetattr failed"); }
 	const char* str = "\e[?25l\e[H\e[J";
 	write(STDOUT_FILENO, str, strlen(str)); 
+	*draw_frame = 1;
 }
 
 static void handle_sigtstp([[maybe_unused]] int sig) {
@@ -37,12 +40,15 @@ static void terminal_restore() {
 	write(STDOUT_FILENO, str, strlen(str));
 }
 
-int terminal_setup(uint32_t* charC_out, uint32_t* lineC_out) {
+int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out, uint8_t* draw_frame_flag) {
 	signal(SIGINT , handle_exitsig);
 	signal(SIGTERM, handle_exitsig);
 	signal(SIGHUP , handle_exitsig);
 	signal(SIGTSTP, handle_sigtstp);
 	signal(SIGCONT, handle_sigcont);
+
+	draw_frame = draw_frame_flag;
+	*draw_frame_flag = 1;
 
 	if(!isatty(STDOUT_FILENO) || !isatty(STDIN_FILENO)) {
 		perror("Textris cannot run without acces to the terminal");
@@ -68,11 +74,11 @@ int terminal_setup(uint32_t* charC_out, uint32_t* lineC_out) {
 	return 0;
 }
 
-void setchar(uint32_t x, uint32_t y, const char* fore, const char* back, char c) {
+void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c) {
 	printf("\033[%d;%dH%s%s%c", y, x, fore, back, c);
 }
 
-void setstr(uint32_t x, uint32_t y, const char* fore, const char* back, const char* s) {
+void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s) {
 	printf("\033[%d;%dH%s%s%s", y, x, fore, back, s);
 }
 

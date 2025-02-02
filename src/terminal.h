@@ -1,6 +1,7 @@
 #ifndef TERMINAL_H
 #define TERMINAL_H
 #include <stdint.h>
+#include <stdio.h>
 
 #define FLUSHOUT fflush(stdout)
 
@@ -39,9 +40,9 @@
 #define CYAN_F			 "\e[96m" 
 #define WHITE_F			 "\e[97m" 
 
-int terminal_setup(uint32_t* charC_out, uint32_t* lineC_out);
+int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out, uint8_t* draw_frame_flag);
 
-void setchar(uint32_t x, uint32_t y, const char* fore, const char* back, char c);
-void setstr(uint32_t x, uint32_t y, const char* fore, const char* back, const char* s);
+void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c);
+void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s);
 
 #endif
