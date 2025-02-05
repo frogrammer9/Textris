@@ -9,8 +9,7 @@
 
 int main() {
 	uint8_t charC = 0, lineC = 0;
-	uint8_t draw_frame_flag = 0;
-	if(terminal_setup(&charC, &lineC, &draw_frame_flag)) { perror("Failed to initialize terminal"); exit(1); }
+	if(terminal_setup(&charC, &lineC)) { perror("Failed to initialize terminal"); exit(1); }
 	if(charC < 22) { perror("Terminal too narow"); exit(1); }
 	if(lineC < 22) { perror("Terminal too short"); exit(1); }
 
@@ -27,16 +26,13 @@ int main() {
 	bitmap[10 * 3 + 1].c = '#';
 	bitmap[10 * 3 + 2].c = '#';
 
+	draw_border(1);
 	char c = EOF;
 	clock_t stime ;
-	while((c = getchar()) != 'q') {
+	while(c != 'q') {
 		stime = clock();
-		if(draw_frame_flag) {
-			draw_frame_flag = 0;
-			draw_border();
-		}
-		draw_bitmap();
-
+		if(read(STDIN_FILENO, &c, 1) <= 0) c = EOF;
+		//draw_bitmap();
 
 
 		uint16_t time_to_sleep = (1000 / 20 /*update freq in Hz*/) - (uint32_t)(clock() - stime) * 1000 / CLOCKS_PER_SEC;

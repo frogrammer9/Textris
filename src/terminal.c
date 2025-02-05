@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "render.h"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,8 +11,6 @@
 
 static struct termios term_old, term_new;
 
-static uint8_t* draw_frame = 0;
-
 static void handle_exitsig([[maybe_unused]] int sig) {
 	_exit(0);
 }
@@ -21,13 +20,13 @@ static void handle_sigcont([[maybe_unused]] int sig) {
 	if(res < 0) { perror("tcsetattr failed"); }
 	const char* str = "\e[?25l\e[H\e[J";
 	write(STDOUT_FILENO, str, strlen(str)); 
-	*draw_frame = 1;
+	draw_border(0);
 }
 
 static void handle_sigtstp([[maybe_unused]] int sig) {
 	int res = tcsetattr(STDIN_FILENO, TCSANOW, &term_old);
 	if(res < 0) { perror("tcsetattr failed"); }
-	const char* str = "\e[?25h";
+	const char* str = "\e[?25l\e[H\e[J";
 	write(STDOUT_FILENO, str, strlen(str)); 
 	signal(SIGTSTP, SIG_DFL);
     raise(SIGTSTP);
@@ -40,15 +39,12 @@ static void terminal_restore() {
 	write(STDOUT_FILENO, str, strlen(str));
 }
 
-int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out, uint8_t* draw_frame_flag) {
+int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out) {
 	signal(SIGINT , handle_exitsig);
 	signal(SIGTERM, handle_exitsig);
 	signal(SIGHUP , handle_exitsig);
 	signal(SIGTSTP, handle_sigtstp);
 	signal(SIGCONT, handle_sigcont);
-
-	draw_frame = draw_frame_flag;
-	*draw_frame_flag = 1;
 
 	if(!isatty(STDOUT_FILENO) || !isatty(STDIN_FILENO)) {
 		perror("Textris cannot run without acces to the terminal");
@@ -82,3 +78,10 @@ void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char
 	printf("\e[%d;%dH%s%s%s", y, x, fore, back, s);
 }
 
+void setchar_at(uint8_t x, uint8_t y, const char* fore, const char* back, char c, char** at) {
+	*at += sprintf(*at, "\e[%d;%dH%s%s%c", y, x, fore, back, c);
+}
+
+void setstr_at(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s, char** at) {
+	*at += sprintf(*at, "\e[%d;%dH%s%s%s", y, x, fore, back, s);
+}

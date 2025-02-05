@@ -40,9 +40,11 @@
 #define CYAN_F			 "\e[96m" 
 #define WHITE_F			 "\e[97m" 
 
-int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out, uint8_t* draw_frame_flag);
+int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out);
 
 void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c);
 void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s);
+void setchar_at(uint8_t x, uint8_t y, const char* fore, const char* back, char c, char** at);
+void setstr_at(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s, char** at);
 
 #endif
