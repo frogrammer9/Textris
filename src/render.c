@@ -1,11 +1,11 @@
 #include "render.h"
 #include "terminal.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 cell bitmap[200]; 
-cell bitmap_copy[200]; 
 
 static uint8_t charC = 0, lineC = 0, scale = 0;
 
@@ -21,53 +21,74 @@ int render_init(uint8_t s, uint8_t cC, uint8_t lC) {
 
 void draw_border(uint8_t do_color) {
 	static uint8_t do_gen = 1;
-	static char buffer[3000] = {0};
+	static char buffer[1200] = {0};
 	if(do_gen) {
 		char* at = buffer;
 		uint32_t midx = (charC - ((20 << scale) + 3)) >> 1;
 		uint32_t midy = (lineC - ((20 << scale) + 2)) >> 1;
-		const char* frame_color_f = (do_color) ? WHITE_F : NULL;
-		const char* frame_color_b = (do_color) ? WHITE_B : NULL;
+		if(do_color) setcol_at(WHITE_F, WHITE_B, &at);
 		for(uint32_t y = 0; y < (21u << scale); ++y) {
-			setchar_at(midx, midy + 1 + y, frame_color_f, frame_color_b, '#', &at);
-			setchar_at(midx + (10u << scale) + 1, midy + 1 + y, frame_color_f, frame_color_b, '#', &at);
-			if(y < (11u << scale) + 5) setchar_at(midx + (10u << scale) * 2 + 2, midy + 1 + y, frame_color_f, frame_color_b, '#', &at);
+			setchar_at(midx, midy + 1 + y, NULL, NULL, '#', &at);
+			setchar_at(midx + (10u << scale) + 1, midy + 1 + y, NULL, NULL, '#', &at);
+			if(y < (11u << scale) + 5) setchar_at(midx + (10u << scale) * 2 + 2, midy + 1 + y, NULL, NULL, '#', &at);
 		}
 		char topline[(10u << scale) * 2 + 3 + 1];
 		memset(topline, '#', (10u << scale) * 2 + 3);
 		topline[(10u << (scale + 1)) + 3] = '\0';
-		setstr_at(midx, midy, frame_color_f, frame_color_b, topline, &at);
+		setstr_at(midx, midy, NULL, NULL, topline, &at);
 		topline[(10 << scale) + 2] = '\0';
-		setstr_at(midx, midy + (21 << scale), frame_color_f, frame_color_b, topline, &at);
-		setstr_at(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1, frame_color_f, frame_color_b, topline, &at);
-		setstr_at(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1 + 6, frame_color_f, frame_color_b, topline, &at);
+		setstr_at(midx, midy + (21 << scale), NULL, NULL, topline, &at);
+		setstr_at(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1, NULL, NULL, topline, &at);
+		setstr_at(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1 + 6, NULL, NULL, topline, &at);
 		do_gen = 0;
-		memcpy(at, DEFAULT_F, strlen(DEFAULT_F));
-		at += strlen(DEFAULT_F);
-		memcpy(at, DEFAULT_F, strlen(DEFAULT_B));
+		if(do_color) setchar_at(0, 0, DEFAULT_F, DEFAULT_B, '\0', &at);
+		else setpos_at(0, 0, &at);
 	}
 	write(STDOUT_FILENO, buffer, strlen(buffer));
 }
 
-void draw_bitmap() { 
+void draw_bitmap(uint8_t do_color) { 
+	static char buffer[4000] = {0};
+	[[maybe_unused]] static cell bitmap_copy[200]; 
+	char* at = buffer;
 	uint32_t midx = ((charC - ((20 << scale) + 3)) >> 1) + 1;
 	uint32_t midy = ((lineC - ((20 << scale) + 2)) >> 1) + 1 + scale;
 	for(uint8_t y = 0; y < 20; ++y) {
-		for(uint8_t x = 0; x < 10; ++x) {
-			if(bitmap[10 * y + x].c != bitmap_copy[10 * y + x].c ||
-				bitmap[10 * y + x].colb != bitmap_copy[10 * y + x].colb ||
-				bitmap[10 * y + x].colf != bitmap_copy[10 * y + x].colf) {
-				if(scale) {
-					setchar(midx + x * 2 + 1, midy + y * 2		, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
-					setchar(midx + x * 2	, midy + y * 2 + 1	, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
-					setchar(midx + x * 2 + 1, midy + y * 2 + 1	, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
-					setchar(midx + x * 2	, midy + y * 2		, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
+		char* lastf = NULL, *lastb = NULL;
+		if(scale) {
+			setpos_at(midx, midy + y * 2, &at);
+			for(int i = 0; i < 2; ++i) {
+				for(uint8_t x = 0; x < 10; ++x) {
+					if(lastf != bitmap[10 * y + x].colf && do_color) {
+						memcpy(at, bitmap[10 * y + x].colf, strlen(bitmap[10 * y + x].colf)); at += strlen(bitmap[10 * y + x].colf);
+						lastf = bitmap[10 * y + x].colf;
+					}
+					if(lastb != bitmap[10 * y + x].colb && do_color) {
+						memcpy(at, bitmap[10 * y + x].colb, strlen(bitmap[10 * y + x].colb)); at += strlen(bitmap[10 * y + x].colb);
+						lastb = bitmap[10 * y + x].colb;
+					}
+					*at = bitmap[10 * y + x].c; at++; 
+					*at = bitmap[10 * y + x].c; at++; 
 				}
-				else setchar(midx + x, midy + y, bitmap[10 * y + x].colf, bitmap[10 * y + x].colb, bitmap[10 * y + x].c);
-				bitmap_copy[10 * y + x].c = bitmap[10 * y + x].c;
-				bitmap_copy[10 * y + x].colb = bitmap[10 * y + x].colb;
-				bitmap_copy[10 * y + x].colf = bitmap[10 * y + x].colf;
+				setpos_at(midx, midy + y * 2 + 1, &at);
+			}
+		}
+		else {
+			setpos_at(midx, midy + y, &at);
+			for(uint8_t x = 0; x < 10; ++x) {
+				if(lastf != bitmap[10 * y + x].colf && do_color) {
+					memcpy(at, bitmap[10 * y + x].colf, strlen(bitmap[10 * y + x].colf)); at += strlen(bitmap[10 * y + x].colf);
+					lastf = bitmap[10 * y + x].colf;
+				}
+				if(lastb != bitmap[10 * y + x].colb && do_color) {
+					memcpy(at, bitmap[10 * y + x].colb, strlen(bitmap[10 * y + x].colb)); at += strlen(bitmap[10 * y + x].colb);
+					lastb = bitmap[10 * y + x].colb;
+				}
+				*at = bitmap[10 * y + x].c; at++; 
 			}
 		}
 	}
+	if(do_color) setchar_at(0, 0, DEFAULT_F, DEFAULT_B, '\0', &at);
+	else setpos_at(0, 0, &at);
+	write(STDOUT_FILENO, buffer, strlen(buffer));
 }

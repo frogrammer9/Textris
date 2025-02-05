@@ -70,18 +70,42 @@ int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out) {
 	return 0;
 }
 
-void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c) {
-	printf("\e[%d;%dH%s%s%c", y, x, fore, back, c);
-}
-
-void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s) {
-	printf("\e[%d;%dH%s%s%s", y, x, fore, back, s);
-}
-
 void setchar_at(uint8_t x, uint8_t y, const char* fore, const char* back, char c, char** at) {
-	*at += sprintf(*at, "\e[%d;%dH%s%s%c", y, x, fore, back, c);
+	if(fore == NULL && back == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%c", y, x, c);
+	else if(fore == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%s%c", y, x, back, c);
+	else if(back == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%s%c", y, x, fore, c);
+	else *at += sprintf(*at, "\e[%d;%dH%s%s%c", y, x, fore, back, c);
 }
 
 void setstr_at(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s, char** at) {
-	*at += sprintf(*at, "\e[%d;%dH%s%s%s", y, x, fore, back, s);
+	if(fore == NULL && back == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%s", y, x, s);
+	else if(fore == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%s%s", y, x, back, s);
+	else if(back == NULL)
+		*at += sprintf(*at, "\e[%d;%dH%s%s", y, x, fore, s);
+	else *at += sprintf(*at, "\e[%d;%dH%s%s%s", y, x, fore, back, s);
+}
+
+void setchar_at_nopos(const char* fore, const char* back, char c, char** at) {
+	*at += sprintf(*at, "%s%s%c", fore, back, c);
+}
+
+void setstr_at_nopos(const char* fore, const char* back, const char* s, char** at) {
+	*at += sprintf(*at, "%s%s%s", fore, back, s);
+}
+
+void setpos_at(uint8_t x, uint8_t y, char** at) {
+	*at += sprintf(*at, "\e[%d;%dH", y, x);
+}
+
+void setcol_at(const char* fore, const char* back, char** at) {
+	if(fore == NULL)
+		*at += sprintf(*at, "%s", back);
+	else if(back == NULL)
+		*at += sprintf(*at, "%s", fore);
+	else *at += sprintf(*at, "%s%s", fore, back);
 }

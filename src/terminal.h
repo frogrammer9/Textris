@@ -42,9 +42,11 @@
 
 int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out);
 
-void setchar(uint8_t x, uint8_t y, const char* fore, const char* back, char c);
-void setstr(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s);
 void setchar_at(uint8_t x, uint8_t y, const char* fore, const char* back, char c, char** at);
 void setstr_at(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s, char** at);
+void setchar_at_nopos(const char* fore, const char* back, char c, char** at);
+void setstr_at_nopos(const char* fore, const char* back, const char* s, char** at);
+void setpos_at(uint8_t x, uint8_t y, char** at);
+void setcol_at(const char* fore, const char* back, char** at);
 
 #endif
