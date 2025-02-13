@@ -48,18 +48,18 @@ int main(int argc, char** argv) {
 
 	[[maybe_unused]] uint32_t score = 0;
 
-	bitmap[10 * 2 + 1].c = '@';
-	bitmap[10 * 2 + 1].colb = RED_B;
-	bitmap[10 * 2 + 1].colf = RED_F;
-	bitmap[10 * 2 + 2].c = '@';
-	bitmap[10 * 2 + 2].colb = RED_B;
-	bitmap[10 * 2 + 2].colf = RED_F;
-	bitmap[10 * 3 + 1].c = '@';
-	bitmap[10 * 3 + 1].colb = RED_B;
-	bitmap[10 * 3 + 1].colf = RED_F;
-	bitmap[10 * 3 + 2].c = '@';
-	bitmap[10 * 3 + 2].colb = RED_B;
-	bitmap[10 * 3 + 2].colf = RED_F;
+	bitmap[10 * 0 + 3].c = '@';
+	bitmap[10 * 0 + 3].colb = RED_B;
+	bitmap[10 * 0 + 3].colf = RED_F;
+	bitmap[10 * 0 + 4].c = '@';
+	bitmap[10 * 0 + 4].colb = RED_B;
+	bitmap[10 * 0 + 4].colf = RED_F;
+	bitmap[10 * 1 + 3].c = '@';
+	bitmap[10 * 1 + 3].colb = RED_B;
+	bitmap[10 * 1 + 3].colf = RED_F;
+	bitmap[10 * 1 + 4].c = '@';
+	bitmap[10 * 1 + 4].colb = RED_B;
+	bitmap[10 * 1 + 4].colf = RED_F;
 
 	draw_border(color);
 	char c = EOF;
