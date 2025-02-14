@@ -44,31 +44,19 @@ int main(int argc, char** argv) {
 	if(scale == 1) scale = 0;
 	else { scale = 0; if(charC > 42 && lineC > 42)  scale = 1; }
 
-	render_init(scale, charC, lineC);
+	render_init(scale, charC, lineC, color);
 
 	[[maybe_unused]] uint32_t score = 0;
 
-	bitmap[10 * 0 + 3].c = '@';
-	bitmap[10 * 0 + 3].colb = RED_B;
-	bitmap[10 * 0 + 3].colf = RED_F;
-	bitmap[10 * 0 + 4].c = '@';
-	bitmap[10 * 0 + 4].colb = RED_B;
-	bitmap[10 * 0 + 4].colf = RED_F;
-	bitmap[10 * 1 + 3].c = '@';
-	bitmap[10 * 1 + 3].colb = RED_B;
-	bitmap[10 * 1 + 3].colf = RED_F;
-	bitmap[10 * 1 + 4].c = '@';
-	bitmap[10 * 1 + 4].colb = RED_B;
-	bitmap[10 * 1 + 4].colf = RED_F;
-
-	draw_border(color);
+	draw_border();
 	char c = EOF;
 	clock_t stime ;
 	while(c != 'q') {
 		stime = clock();
 		if(read(STDIN_FILENO, &c, 1) <= 0) c = EOF;
-		draw_bitmap(color);
+		draw_bitmap();
 
+		update();
 
 		uint16_t time_to_sleep = (1000 / 20 /*update freq in Hz*/) - (uint32_t)(clock() - stime) * 1000 / CLOCKS_PER_SEC;
 		poll(NULL, 0, time_to_sleep);

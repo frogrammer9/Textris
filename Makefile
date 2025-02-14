@@ -2,7 +2,7 @@
 CC = clang
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -Werror -O0 -g 
+CFLAGS = -Wall -Wextra -O0 -g 
 
 # Build directory
 BUILD_DIR = build

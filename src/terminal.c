@@ -12,7 +12,7 @@
 static struct termios term_old, term_new;
 
 static void handle_exitsig([[maybe_unused]] int sig) {
-	_exit(0);
+	_exit(0); //Very usefull
 }
 
 static void handle_sigcont([[maybe_unused]] int sig) {
@@ -20,7 +20,7 @@ static void handle_sigcont([[maybe_unused]] int sig) {
 	if(res < 0) { perror("tcsetattr failed"); }
 	const char* str = "\e[?25l\e[H\e[J";
 	write(STDOUT_FILENO, str, strlen(str)); 
-	draw_border(0);
+	draw_border();
 }
 
 static void handle_sigtstp([[maybe_unused]] int sig) {
@@ -103,6 +103,7 @@ void setpos_at(uint8_t x, uint8_t y, char** at) {
 }
 
 void setcol_at(const char* fore, const char* back, char** at) {
+	if(fore == NULL && back == NULL) return;
 	if(fore == NULL)
 		*at += sprintf(*at, "%s", back);
 	else if(back == NULL)
