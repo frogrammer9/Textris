@@ -10,7 +10,6 @@
 #include "terminal.h"
 
 int main(int argc, char** argv) {
-
 	int color = 1;
 	int scale = 0;
 
@@ -46,6 +45,16 @@ int main(int argc, char** argv) {
 
 	render_init(scale, charC, lineC, color);
 
+	cell bitmapS[BITMAP_SIZE], bitmapD[BITMAP_SIZE], bitmapS_cp[BITMAP_SIZE], bitmapD_cp[BITMAP_SIZE];
+	bitmap_init(bitmapS);
+	bitmap_init(bitmapD);
+	bitmap_init(bitmapS_cp);
+	bitmap_init(bitmapD_cp);
+
+	bitmap_set(bitmapS, 6, 6, '#', DEFAULT_F | DEFAULT_B);
+	bitmap_set(bitmapS, 4, 6, '#', DEFAULT_F | DEFAULT_B);
+	bitmap_set(bitmapS, 5, 4, '#', DEFAULT_F | DEFAULT_B);
+
 	[[maybe_unused]] uint32_t score = 0;
 
 	draw_border();
@@ -54,12 +63,16 @@ int main(int argc, char** argv) {
 	while(c != 'q') {
 		stime = clock();
 		if(read(STDIN_FILENO, &c, 1) <= 0) c = EOF;
-		draw_bitmap();
+		draw_bitmap(bitmapS, bitmapS_cp);
 
-		update();
+		if(c == 's') bitmap_shift_down(bitmapS, 1);
+		if(c == 'a') bitmap_shift_left(bitmapS);
+		if(c == 'd') bitmap_shift_right(bitmapS);
+
+		//update();
 
 		uint16_t time_to_sleep = (1000 / 20 /*update freq in Hz*/) - (uint32_t)(clock() - stime) * 1000 / CLOCKS_PER_SEC;
-		poll(NULL, 0, time_to_sleep);
+		usleep(time_to_sleep * 1000);
 	}
 
 	return 0;

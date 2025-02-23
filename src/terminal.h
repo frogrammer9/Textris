@@ -5,48 +5,34 @@
 
 #define FLUSHOUT fflush(stdout)
 
-#define DEFAULT_B		 "\e[49m" 
-#define BLACK_B			 "\e[40m" 
-#define DARK_RED_B		 "\e[41m" 
-#define DARK_GREEN_B	 "\e[42m" 
-#define YELLOW_B		 "\e[43m" 
-#define DARK_BLUE_B		 "\e[44m" 
-#define DARK_MAGENTA_B	 "\e[45m" 
-#define DARK_CYAN_B		 "\e[46m" 
-#define LIGHT_GRAY_B	 "\e[47m" 
-#define DARK_GRAY_B		 "\e[100m"	
-#define RED_B			 "\e[101m"	
-#define GREEN_B			 "\e[101m"	
-#define ORANGE_B		 "\e[103m"	
-#define BLUE_B			 "\e[104m"	
-#define MAGENTA_B		 "\e[105m"	
-#define CYAN_B			 "\e[106m"	
-#define WHITE_B			 "\e[107m" 
-#define DEFAULT_F		 "\e[39m"  
-#define BLACK_F			 "\e[30m"  
-#define YELLOW_F		 "\e[33m"  
-#define DARK_RED_F		 "\e[31m"  
-#define DARK_GREEN_F	 "\e[32m"  
-#define DARK_BLUE_F		 "\e[34m"  
-#define DARK_MAGENTA_F	 "\e[35m"  
-#define DARK_CYAN_F		 "\e[36m"  
-#define LIGHT_GRAY_F	 "\e[37m"  
-#define DARK_GRAY_F		 "\e[90m" 
-#define RED_F			 "\e[91m" 
-#define GREEN_F			 "\e[92m" 
-#define ORANGE_F		 "\e[93m" 
-#define BLUE_F			 "\e[94m" 
-#define MAGENTA_F		 "\e[95m" 
-#define CYAN_F			 "\e[96m" 
-#define WHITE_F			 "\e[97m" 
+//PERF: Change this to an array and treat color as an index into said array
+
+#define NO_COLOR_B		0x0F
+#define NO_COLOR_F		0xF0
+#define DEFAULT_B		0x00
+#define DARK_GREEN_B	0x01
+#define DARK_MAGENTA_B	0x02
+#define RED_B			0x03
+#define ORANGE_B		0x04
+#define BLUE_B			0x05
+#define CYAN_B			0x06
+#define WHITE_B			0x07
+#define DEFAULT_F		0x00
+#define DARK_GREEN_F	0x10
+#define DARK_MAGENTA_F	0x20
+#define RED_F			0x30
+#define ORANGE_F		0x40
+#define BLUE_F			0x50
+#define CYAN_F			0x60
+#define WHITE_F			0x70
 
 int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out);
 
-void setchar_at(uint8_t x, uint8_t y, const char* fore, const char* back, char c, char** at);
-void setstr_at(uint8_t x, uint8_t y, const char* fore, const char* back, const char* s, char** at);
-void setchar_at_nopos(const char* fore, const char* back, char c, char** at);
-void setstr_at_nopos(const char* fore, const char* back, const char* s, char** at);
+void setchar_at(uint8_t x, uint8_t y, uint8_t color, char c, char** at);
+void setstr_at(uint8_t x, uint8_t y, uint8_t color, const char* s, char** at);
+void setchar_at_nopos(uint8_t color, char c, char** at);
+void setstr_at_nopos(uint8_t color, const char* s, char** at);
 void setpos_at(uint8_t x, uint8_t y, char** at);
-void setcol_at(const char* fore, const char* back, char** at);
+void setcol_at(uint8_t color, char** at);
 
 #endif
