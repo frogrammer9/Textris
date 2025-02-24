@@ -5,8 +5,6 @@
 
 #define FLUSHOUT fflush(stdout)
 
-//PERF: Change this to an array and treat color as an index into said array
-
 #define NO_COLOR_B		0x0F
 #define NO_COLOR_F		0xF0
 #define DEFAULT_B		0x00
@@ -31,7 +29,9 @@ int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out);
 void setchar_at(uint8_t x, uint8_t y, uint8_t color, char c, char** at);
 void setstr_at(uint8_t x, uint8_t y, uint8_t color, const char* s, char** at);
 void setchar_at_nopos(uint8_t color, char c, char** at);
+void setchar_at_nocol(uint8_t x, uint8_t y, char c, char** at);
 void setstr_at_nopos(uint8_t color, const char* s, char** at);
+void setstr_at_nocol(uint8_t x, uint8_t y, const char* s, char** at);
 void setpos_at(uint8_t x, uint8_t y, char** at);
 void setcol_at(uint8_t color, char** at);
 

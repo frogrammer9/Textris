@@ -15,7 +15,7 @@ uint8_t last_colf = NO_COLOR_F, last_colb = NO_COLOR_B;
 static uint8_t charC = 0, lineC = 0, scale = 0, do_col = 0, midx = 0, midy = 0;
 
 void flushTTY() {
-	write(STDOUT_FILENO, stdout_buffer, (size_t)buf_at - (size_t)stdout_buffer);
+	write(STDOUT_FILENO, stdout_buffer, (uintptr_t)buf_at - (uintptr_t)stdout_buffer);
 	buf_at = stdout_buffer;
 	last_colf = NO_COLOR_F; 
 	last_colb = NO_COLOR_B;
@@ -26,46 +26,56 @@ void writeTTC(char* data, size_t size) {
 		write(STDOUT_FILENO, data, size);
 		return;
 	}
-	if((size_t)buf_at - (size_t)stdout_buffer < size) flushTTY();
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < size) flushTTY();
 	memcpy(buf_at, data, size);
 	buf_at += size;
 }
 
 void setcharTTY(uint8_t x, uint8_t y, uint8_t color, char c) {
-	if((size_t)buf_at - (size_t)stdout_buffer < 32) flushTTY();
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 32) flushTTY();
 	if(last_colf == (color >> 4)) color &= NO_COLOR_F;
 	if(last_colb == (color & 0x0F)) color &= NO_COLOR_B;
 	setchar_at(x, y, color, c, &buf_at);
 }
 
-void setchar_noptTTY(char c) {
-	if((size_t)buf_at - (size_t)stdout_buffer < 2) flushTTY();
+void setcharTTY_nocol(uint8_t x, uint8_t y, char c) {
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 32) flushTTY();
+	setchar_at_nocol(x, y, c, &buf_at);
+}
+
+void setcharTTY_nopt(char c) {
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 2) flushTTY();
 	*(buf_at++) = c;
 }
 
-void setchar_noposTTY(uint8_t color, char c) {
-	if((size_t)buf_at - (size_t)stdout_buffer < 16) flushTTY();
+void setcharTTY_nopos(uint8_t color, char c) {
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 16) flushTTY();
 	if(last_colf == (color >> 4)) color &= NO_COLOR_F;
 	if(last_colb == (color & 0x0F)) color &= NO_COLOR_B;
 	setchar_at_nopos(color, c, &buf_at);
 }
 
 void setstrTTY(uint8_t x, uint8_t y, uint8_t color, const char* s) {
-	if((size_t)buf_at - (size_t)stdout_buffer < (32 + strlen(s))) flushTTY();
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < (32 + strlen(s))) flushTTY();
 	if(last_colf == (color >> 4)) color &= NO_COLOR_F;
 	if(last_colb == (color & 0x0F)) color &= NO_COLOR_B;
 	setstr_at(x, y, color, s, &buf_at);
 }
 
+void setstrTTY_nocol(uint8_t x, uint8_t y, const char* s) {
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < (32 + strlen(s))) flushTTY();
+	setstr_at_nocol(x, y, s, &buf_at);
+}
+
 void setcolTTY(uint8_t color) {
-	if((size_t)buf_at - (size_t)stdout_buffer < 16) flushTTY();
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 16) flushTTY();
 	if(last_colf == (color >> 4)) color &= NO_COLOR_F;
 	if(last_colb == (color & 0x0F)) color &= NO_COLOR_B;
 	setcol_at(color, &buf_at);
 }
 
 void setposTTY(uint8_t x, uint8_t y) {
-	if((size_t)buf_at - (size_t)stdout_buffer < 16) flushTTY();
+	if((uintptr_t)buf_at - (uintptr_t)stdout_buffer < 16) flushTTY();
 	setpos_at(x, y, &buf_at);
 }
 
@@ -86,22 +96,22 @@ void draw_border() {
 	if(do_gen) {
 		uint32_t midx = (charC - ((20 << scale) + 3)) >> 1;
 		uint32_t midy = (lineC - ((20 << scale) + 2)) >> 1;
-		if(do_col) setcolTTY(DEFAULT_F | DEFAULT_B);
+		if(do_col) setcolTTY(WHITE_F | WHITE_B);
 		for(uint32_t y = 0; y < (21u << scale); ++y) {
-			setcharTTY(midx, midy + 1 + y, NO_COLOR_F | NO_COLOR_B, '#');
-			setcharTTY(midx + (10u << scale) + 1, midy + 1 + y, NO_COLOR_F | NO_COLOR_B, '#');
-			if(y < (11u << scale) + 5) setcharTTY(midx + (10u << scale) * 2 + 2, midy + 1 + y, NO_COLOR_F | NO_COLOR_B, '#');
+			setcharTTY_nocol(midx, midy + 1 + y, '#');
+			setcharTTY_nocol(midx + (10u << scale) + 1, midy + 1 + y, '#');
+			if(y < (11u << scale) + 5) setcharTTY_nocol(midx + (10u << scale) * 2 + 2, midy + 1 + y, '#');
 		}
 		char topline[(10u << scale) * 2 + 3 + 1];
 		memset(topline, '#', (10u << scale) * 2 + 3);
 		topline[(10u << (scale + 1)) + 3] = '\0';
-		setstrTTY(midx, midy, NO_COLOR_F | NO_COLOR_B, topline);
+		setstrTTY_nocol(midx, midy, topline);
 		topline[(10 << scale) + 2] = '\0';
-		setstrTTY(midx, midy + (21 << scale), NO_COLOR_F | NO_COLOR_B, topline);
-		setstrTTY(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1, NO_COLOR_F | NO_COLOR_B, topline);
-		setstrTTY(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1 + 6, NO_COLOR_F | NO_COLOR_B, topline);
+		setstrTTY_nocol(midx, midy + (21 << scale), topline);
+		setstrTTY_nocol(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1, topline);
+		setstrTTY_nocol(midx + (10u << scale) + 1, midy + (21u << scale) / 2 + 1 + 6, topline);
 		do_gen = 0;
-		if(do_col) setcharTTY(0, 0, DEFAULT_F | DEFAULT_B, '\0');
+		if(do_col) setcolTTY(DEFAULT_F | DEFAULT_B);
 	}
 	flushTTY();
 }
@@ -129,7 +139,7 @@ void bitmap_set(cell bitmap[BITMAP_SIZE], uint8_t x, uint8_t y, char c, uint8_t 
 }
 
 void bitmap_shift_down(cell bitmap[BITMAP_SIZE], uint8_t amount) {
-	memcpy(&bitmap[10 * amount], bitmap, (200 - 10 * amount) * sizeof(cell));
+	memmove(&bitmap[10 * amount], bitmap, (200 - 10 * amount) * sizeof(cell));
 	for(uint8_t i = 0; i < 10 * amount; ++i) {
 		bitmap[i].c = ' ';
 		if(do_col) bitmap[i].color = DEFAULT_F | DEFAULT_B;
@@ -139,7 +149,7 @@ void bitmap_shift_down(cell bitmap[BITMAP_SIZE], uint8_t amount) {
 
 void bitmap_shift_right(cell bitmap[BITMAP_SIZE]) {
 	for(uint8_t i = 0; i < 200; i += 10) {
-		memcpy(&bitmap[i + 1], &bitmap[i], 9 * sizeof(cell));
+		memmove(&bitmap[i + 1], &bitmap[i], 9 * sizeof(cell));
 		bitmap[i].c = ' ';
 		if(do_col) bitmap[i].color = DEFAULT_F | DEFAULT_B;
 		else bitmap[i].color = NO_COLOR_F | NO_COLOR_B;
@@ -148,10 +158,19 @@ void bitmap_shift_right(cell bitmap[BITMAP_SIZE]) {
 
 void bitmap_shift_left(cell bitmap[BITMAP_SIZE]) {
 	for(uint8_t i = 0; i < 200; i += 10) {
-		memcpy(&bitmap[i], &bitmap[i + 1], 9 * sizeof(cell));
+		memmove(&bitmap[i], &bitmap[i + 1], 9 * sizeof(cell));
 		bitmap[i + 9].c = ' ';
 		if(do_col) bitmap[i + 9].color = DEFAULT_F | DEFAULT_B;
 		else bitmap[i + 9].color = NO_COLOR_F | NO_COLOR_B;
+	}
+}
+
+void bitmap_remove_line(cell bitmap[BITMAP_SIZE], uint8_t lineNumber, uint8_t lineAmount) {
+	memmove(&bitmap[10 * lineAmount], bitmap, lineNumber * 10 * sizeof(cell));
+	for(uint8_t i = 0; i < 10 * lineAmount; ++i) {
+		bitmap[i].c = ' ';
+		if(do_col) bitmap[i].color = DEFAULT_F | DEFAULT_B;
+		else bitmap[i].color = NO_COLOR_F | NO_COLOR_B;
 	}
 }
 
@@ -162,24 +181,26 @@ void draw_bitmap(cell bitmap[BITMAP_SIZE], cell bitmap_cp[BITMAP_SIZE]) {
 			setposTTY(midx, midy + y * 2);
 			for(int i = 0; i < 2; ++i) {
 				for(uint8_t x = 0; x < 10; ++x) {
-					setchar_noposTTY(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
-					setchar_noposTTY(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
-					bitmap_cp[10 * y + x].c = bitmap[10 * y + x].c;
-					bitmap_cp[10 * y + x].color = bitmap[10 * y + x].color;
+					setcharTTY_nopos(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
+					setcharTTY_nopos(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
+					if(i == 1) {
+						bitmap_cp[10 * y + x].c = bitmap[10 * y + x].c;
+						bitmap_cp[10 * y + x].color = bitmap[10 * y + x].color;
+					}
 				}
-				setposTTY(midx, midy + y * 2 + 1);
+				if(i == 0) setposTTY(midx, midy + y * 2 + 1);
 			}
 		}
 		else {
 			setposTTY(midx, midy + y);
 			for(uint8_t x = 0; x < 10; ++x) {
-				setchar_noposTTY(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
+				setcharTTY_nopos(bitmap[10 * y + x].color, bitmap[10 * y + x].c);
 				bitmap_cp[10 * y + x].c = bitmap[10 * y + x].c;
 				bitmap_cp[10 * y + x].color = bitmap[10 * y + x].color;
 			}
 		}
 	}
-	if(do_col) setcharTTY(0, 0, DEFAULT_F | DEFAULT_B, '\0');
+	if(do_col) setcolTTY(DEFAULT_F | DEFAULT_B);
 	flushTTY();
 }
 

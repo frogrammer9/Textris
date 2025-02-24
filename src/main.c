@@ -51,9 +51,8 @@ int main(int argc, char** argv) {
 	bitmap_init(bitmapS_cp);
 	bitmap_init(bitmapD_cp);
 
-	bitmap_set(bitmapS, 6, 6, '#', DEFAULT_F | DEFAULT_B);
-	bitmap_set(bitmapS, 4, 6, '#', DEFAULT_F | DEFAULT_B);
-	bitmap_set(bitmapS, 5, 4, '#', DEFAULT_F | DEFAULT_B);
+	bitmap_set(bitmapS, 5, 0, '#', DEFAULT_F | DEFAULT_B);
+	bitmap_set(bitmapS, 5, 2, '#', DEFAULT_F | DEFAULT_B);
 
 	[[maybe_unused]] uint32_t score = 0;
 
@@ -68,9 +67,11 @@ int main(int argc, char** argv) {
 		if(c == 's') bitmap_shift_down(bitmapS, 1);
 		if(c == 'a') bitmap_shift_left(bitmapS);
 		if(c == 'd') bitmap_shift_right(bitmapS);
+		if(c == 't') bitmap_remove_line(bitmapS, 4, 1);
 
 		//update();
 
+		FLUSHOUT;
 		uint16_t time_to_sleep = (1000 / 20 /*update freq in Hz*/) - (uint32_t)(clock() - stime) * 1000 / CLOCKS_PER_SEC;
 		usleep(time_to_sleep * 1000);
 	}
