@@ -24,7 +24,7 @@
 #define CYAN_F			0x60
 #define WHITE_F			0x70
 
-int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out);
+int terminal_setup(uint16_t* charC_out, uint16_t* lineC_out);
 
 void setchar_at(uint8_t x, uint8_t y, uint8_t color, char c, char** at);
 void setstr_at(uint8_t x, uint8_t y, uint8_t color, const char* s, char** at);

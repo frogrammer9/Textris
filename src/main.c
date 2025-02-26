@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	
-	uint8_t charC = 0, lineC = 0;
+	uint16_t charC = 0, lineC = 0;
 	if(terminal_setup(&charC, &lineC)) { perror("Failed to initialize terminal"); return 1; }
 	if(charC < 22) { perror("Terminal too narow"); return 1; }
 	if(lineC < 22) { perror("Terminal too short"); return 1; }
@@ -51,8 +51,12 @@ int main(int argc, char** argv) {
 	bitmap_init(bitmapS_cp);
 	bitmap_init(bitmapD_cp);
 
-	bitmap_set(bitmapS, 5, 0, '#', DEFAULT_F | DEFAULT_B);
-	bitmap_set(bitmapS, 5, 2, '#', DEFAULT_F | DEFAULT_B);
+	bitmap_set(bitmapD, 2, 1, '#', RED_F | RED_B);
+	bitmap_set(bitmapD, 2, 2, '#', RED_F | RED_B);
+	bitmap_set(bitmapD, 2, 3, '#', RED_F | RED_B);
+	bitmap_set(bitmapD, 3, 3, '#', RED_F | RED_B);
+
+	uint8_t X = 2, Y = 2;
 
 	[[maybe_unused]] uint32_t score = 0;
 
@@ -62,12 +66,12 @@ int main(int argc, char** argv) {
 	while(c != 'q') {
 		stime = clock();
 		if(read(STDIN_FILENO, &c, 1) <= 0) c = EOF;
-		draw_bitmap(bitmapS, bitmapS_cp);
+		draw_bitmap(bitmapD, bitmapD_cp);
 
-		if(c == 's') bitmap_shift_down(bitmapS, 1);
-		if(c == 'a') bitmap_shift_left(bitmapS);
-		if(c == 'd') bitmap_shift_right(bitmapS);
-		if(c == 't') bitmap_remove_line(bitmapS, 4, 1);
+		if(c == 's') { bitmap_shift_down(bitmapD, 1); ++Y; }
+		if(c == 'a') { bitmap_shift_left(bitmapD); --X; }
+		if(c == 'd') { bitmap_shift_right(bitmapD); ++X; }
+		if(c == 'w') bitmap_rotate(bitmapD, X, Y, tet_J);
 
 		//update();
 

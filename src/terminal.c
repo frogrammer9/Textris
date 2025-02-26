@@ -49,7 +49,7 @@ static void terminal_restore() {
 	write(STDOUT_FILENO, str, strlen(str));
 }
 
-int terminal_setup(uint8_t* charC_out, uint8_t* lineC_out) {
+int terminal_setup(uint16_t* charC_out, uint16_t* lineC_out) {
 	signal(SIGTSTP, handle_sigtstp);
 	signal(SIGCONT, handle_sigcont);
 

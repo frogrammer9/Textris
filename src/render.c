@@ -12,7 +12,8 @@ static char* buf_at = stdout_buffer;
 uint8_t last_colf = NO_COLOR_F, last_colb = NO_COLOR_B;
 
 //Global vars
-static uint8_t charC = 0, lineC = 0, scale = 0, do_col = 0, midx = 0, midy = 0;
+static uint16_t charC = 0, lineC = 0;
+static uint8_t scale = 0, do_col = 0, midx = 0, midy = 0;
 
 void flushTTY() {
 	write(STDOUT_FILENO, stdout_buffer, (uintptr_t)buf_at - (uintptr_t)stdout_buffer);
@@ -83,7 +84,7 @@ void setposTTY(uint8_t x, uint8_t y) {
 /// Rendering
 //////////////////////////////////////
 
-int render_init(uint8_t s, uint8_t cC, uint8_t lC, uint8_t dc) {
+int render_init(uint8_t s, uint16_t cC, uint16_t lC, uint8_t dc) {
 	charC = cC, lineC = lC,  scale = s, do_col = dc;
 	midx = ((charC - ((20 << scale) + 3)) >> 1) + 1;
 	midy = ((lineC - ((20 << scale) + 2)) >> 1) + 1 + scale;
@@ -174,6 +175,43 @@ void bitmap_remove_line(cell bitmap[BITMAP_SIZE], uint8_t lineNumber, uint8_t li
 	}
 }
 
+void bitmap_rotate(cell bitmap[BITMAP_SIZE], uint8_t pivotX, uint8_t pivotY, tetromino_type type) {
+	cell pivot = bitmap[10 * pivotY + pivotX];
+	cell emptyCell = (do_col) ? (cell){.c = ' ', .color = DEFAULT_F | DEFAULT_B } : (cell){.c = ' ', .color = NO_COLOR_F | NO_COLOR_B};
+	switch(type) {
+		case tet_I: 
+			bitmap[10 * (pivotY - 1) + pivotX] = bitmap[10 * (pivotY + 1) + pivotX] = bitmap[10 * (pivotY + 2) + pivotX] = (bitmap[10 * (pivotY - 1) + pivotX].c != ' ') ? emptyCell : pivot;
+			bitmap[10 * pivotY + pivotX - 1] = bitmap[10 * pivotY + pivotX + 1] = bitmap[10 * pivotY + pivotX + 2] = (bitmap[10 * (pivotY - 1) + pivotX].c != ' ') ? pivot : emptyCell;
+		return;
+		case tet_O: return; //Kasane Teto lol
+		case tet_T: 
+			if	   (bitmap[10 * (pivotY + 0) + pivotX + 1].c == ' ') { bitmap[10 * (pivotY + 1) + pivotX + 0] = emptyCell; bitmap[10 * (pivotY + 0) + pivotX + 1] = pivot; }
+			else if(bitmap[10 * (pivotY + 1) + pivotX + 0].c == ' ') { bitmap[10 * (pivotY + 0) + pivotX - 1] = emptyCell; bitmap[10 * (pivotY + 1) + pivotX + 0] = pivot; }
+			else if(bitmap[10 * (pivotY + 0) + pivotX - 1].c == ' ') { bitmap[10 * (pivotY - 1) + pivotX + 0] = emptyCell; bitmap[10 * (pivotY + 0) + pivotX - 1] = pivot; }
+			else if(bitmap[10 * (pivotY - 1) + pivotX + 0].c == ' ') { bitmap[10 * (pivotY + 0) + pivotX + 1] = emptyCell; bitmap[10 * (pivotY - 1) + pivotX + 0] = pivot; }
+		return;
+		case tet_S: {
+			cell c = (bitmap[10 * pivotY + pivotX - 1].c == ' ') ? pivot : emptyCell;
+			bitmap[10 * (pivotY + 0) + pivotX - 1] = bitmap[10 * (pivotY - 1) + pivotX - 1] = c;
+			bitmap[10 * (pivotY + 1) + pivotX - 1] = bitmap[10 * (pivotY + 0) + pivotX + 1] = (c.c == ' ') ? pivot : emptyCell;
+		} return;
+		case tet_Z: {
+			cell c = (bitmap[10 * pivotY + pivotX - 1].c == ' ') ? pivot : emptyCell; 
+			bitmap[10 * (pivotY + 0) + pivotX - 1] = bitmap[10 * (pivotY + 1) + pivotX + 1] = c;
+			bitmap[10 * (pivotY - 1) + pivotX + 1] = bitmap[10 * (pivotY + 0) + pivotX + 1] = (c.c == ' ') ? pivot : emptyCell;
+		} return;
+		case tet_J: case tet_L: {
+			cell c = (bitmap[10 * pivotY + pivotX + 1].c == ' ') ? pivot : emptyCell;
+			bitmap[10 * pivotY + pivotX + 1] = bitmap[10 * pivotY + pivotX - 1] = c;
+			bitmap[10 * (pivotY + 1) + pivotX] = bitmap[10 * (pivotY - 1) + pivotX] = (c.c == ' ') ? pivot : emptyCell;
+			if(bitmap[10 * (pivotY + 1) + pivotX + 1].c != ' ') { bitmap[10 * (pivotY + 1) + pivotX - 1] = pivot; bitmap[10 * (pivotY + 1) + pivotX + 1] = emptyCell; }
+			else if(bitmap[10 * (pivotY + 1) + pivotX - 1].c != ' ') { bitmap[10 * (pivotY - 1) + pivotX - 1] = pivot; bitmap[10 * (pivotY + 1) + pivotX - 1] = emptyCell; }
+			else if(bitmap[10 * (pivotY - 1) + pivotX - 1].c != ' ') { bitmap[10 * (pivotY - 1) + pivotX + 1] = pivot; bitmap[10 * (pivotY - 1) + pivotX - 1] = emptyCell; }
+			else if(bitmap[10 * (pivotY - 1) + pivotX + 1].c != ' ') { bitmap[10 * (pivotY + 1) + pivotX + 1] = pivot; bitmap[10 * (pivotY - 1) + pivotX + 1] = emptyCell; }
+		} return;
+	} 
+}
+
 void draw_bitmap(cell bitmap[BITMAP_SIZE], cell bitmap_cp[BITMAP_SIZE]) { 
 	for(uint8_t y = 0; y < 20; ++y) {
 		if(bitmap_cmpRow(bitmap, bitmap_cp, y)) continue;
@@ -203,420 +241,3 @@ void draw_bitmap(cell bitmap[BITMAP_SIZE], cell bitmap_cp[BITMAP_SIZE]) {
 	if(do_col) setcolTTY(DEFAULT_F | DEFAULT_B);
 	flushTTY();
 }
-
-//////////////////////////////////////
-/// Game
-//////////////////////////////////////
-
-/*
-
-[[maybe_unused]] static tetromino_type current_tetromino;
-[[maybe_unused]] static tetromino_type next_tetromino;
-
-void draw_tet_I(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_O(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_T(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_L(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_J(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_S(uint8_t x, uint8_t y, uint8_t r);
-void draw_tet_Z(uint8_t x, uint8_t y, uint8_t r);
-
-//tet_I, tet_O,	tet_T, tet_L, tet_J, tet_S, tet_Z
-static const char* tet_colf[] = {CYAN_F, YELLOW_F, DARK_MAGENTA_F, ORANGE_F, BLUE_F, DARK_GREEN_F, RED_F};
-static const char* tet_colb[] = {CYAN_B, YELLOW_B, DARK_MAGENTA_B, ORANGE_B, BLUE_B, DARK_GREEN_B, RED_B};
-static const char  tet_char[] = {'@', '$', '&', '+', 'o', 'x', '%'};
-
-static void render_tetromino(tetromino_type t, uint8_t x, uint8_t y, uint8_t r) {
-	if(x > charC || y > lineC) return;
-	r &= 3; //mod 4
-	switch(t) {
-		case tet_I:	draw_tet_I(x, y, r); break;
-		case tet_O:	draw_tet_O(x, y, r); break;
-		case tet_T:	draw_tet_T(x, y, r); break;
-		case tet_L:	draw_tet_L(x, y, r); break;
-		case tet_J:	draw_tet_J(x, y, r); break;
-		case tet_S:	draw_tet_S(x, y, r); break;
-		case tet_Z:	draw_tet_Z(x, y, r); break;
-	}
-	flushTTY();
-}
-
-
-uint8_t update() {
-	render_tetromino(tet_Z, 4, 4, 0);
-	return 0;
-}
-
-
-tetromino_type get_next() {
-	return tet_I;
-}
-
-void draw_tet_I(uint8_t x, uint8_t y, uint8_t r) {
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	if(r == 2) --y;
-	else if(r == 3) ++x;
-	if((r & 1) == 0) {
-		if(scale) {
-			setcharTTY(x - 2, y + 0, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]);
-			setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]);
-			setcharTTY(x - 2, y + 1, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]);
-			setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]);
-		}
-		else {
-			setcharTTY(x, y, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]);
-			setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]);
-		}
-	}
-	else {
-		if(scale) {
-			setcharTTY(x, y + 0, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y - 1, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y - 2, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y - 3, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y + 1, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y + 2, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y + 3, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-			setcharTTY(x, y + 4, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]); setchar_noptTTY(tet_char[tet_I]); 
-		}
-		else {
-			setcharTTY(x, y + 0, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]);
-			setcharTTY(x, y + 1, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]);
-			setcharTTY(x, y + 2, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]);
-			setcharTTY(x, y - 1, tet_colf[tet_I], tet_colb[tet_I], tet_char[tet_I]);
-		}
-	}
-}
-
-void draw_tet_O(uint8_t x, uint8_t y, [[maybe_unused]] uint8_t r) { //center: top left corner
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	if(scale) {
-		setcharTTY(x, y + 0, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]);
-		setcharTTY(x, y + 1, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]);
-		setcharTTY(x, y + 2, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]);
-		setcharTTY(x, y + 3, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]); setchar_noptTTY(tet_char[tet_O]);
-	}
-	else {
-		setcharTTY(x, y + 0, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]);
-		setcharTTY(x, y + 1, tet_colf[tet_O], tet_colb[tet_O], tet_char[tet_O]);
-		setchar_noptTTY(tet_char[tet_O]);
-	}
-}
-
-void draw_tet_T(uint8_t x, uint8_t y, uint8_t r) {
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	switch(r) {
-		case 0:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 3, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-
-			}
-		break;
-		case 1:
-			if(scale) {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 2, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 3, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-			}
-			else {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-				setcharTTY(x - 1, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-			}
-		break;
-		case 2:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-			}
-		break;
-		case 3:
-			if(scale) {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setchar_noptTTY(tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 2, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 3, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-			}
-			else {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]); setchar_noptTTY(tet_char[tet_T]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_T], tet_colb[tet_T], tet_char[tet_T]);
-			}
-		break;
-	}
-}
-
-void draw_tet_L(uint8_t x, uint8_t y, uint8_t r) {
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	switch(r) {
-		case 0:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y + 2, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y + 3, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 1, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-
-			}
-		break;
-		case 1:
-			if(scale) {
-				setcharTTY(x - 0, y + 2, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 3, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y - 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-			}
-			else {
-				setcharTTY(x - 0, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-				setcharTTY(x - 1, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-			}
-		break;
-		case 2:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x + 2, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x + 2, y - 2, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x + 1, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-			}
-		break;
-		case 3:
-			if(scale) {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 2, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setchar_noptTTY(tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-			}
-			else {
-				setcharTTY(x - 0, y + 0, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]); setchar_noptTTY(tet_char[tet_L]);
-				setcharTTY(x - 0, y - 1, tet_colf[tet_L], tet_colb[tet_L], tet_char[tet_L]);
-			}
-		break;
-	}
-}
-
-void draw_tet_J(uint8_t x, uint8_t y, uint8_t r) {
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	switch(r) {
-		case 0:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x + 2, y + 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x + 2, y + 3, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x + 1, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-
-			}
-		break;
-		case 1:
-			if(scale) {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y + 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y + 3, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-			}
-			else {
-				setcharTTY(x - 0, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-				setcharTTY(x - 1, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-			}
-		break;
-		case 2:
-			if(scale) {
-				setcharTTY(x - 2, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 2, y - 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-			}
-			else {
-				setcharTTY(x - 1, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 1, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-			}
-		break;
-		case 3:
-			if(scale) {
-				setcharTTY(x - 0, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y - 2, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setchar_noptTTY(tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-			}
-			else {
-				setcharTTY(x - 0, y + 0, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-				setcharTTY(x - 0, y - 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]); setchar_noptTTY(tet_char[tet_J]);
-				setcharTTY(x - 0, y + 1, tet_colf[tet_J], tet_colb[tet_J], tet_char[tet_J]);
-			}
-		break;
-	}
-}
-
-void draw_tet_S(uint8_t x, uint8_t y, uint8_t r) {
-	if(r == 2) --y;
-	else if(r == 3) ++x;
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	if((r & 1) == 0) {
-		if(scale) {
-			setcharTTY(x - 0, y, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 0, y + 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 2, y + 2, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 2, y + 3, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-		}
-		else {
-			setcharTTY(x - 0, y - 0, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 1, y + 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-		}
-	}
-	else {
-		if(scale) {
-			setcharTTY(x - 2, y, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 2, y + 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setchar_noptTTY(tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 2, y - 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 2, y - 2, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 0, y + 2, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 0, y + 3, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]); 
-		}
-		else {
-			setcharTTY(x - 1, y - 0, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]); setchar_noptTTY(tet_char[tet_S]);
-			setcharTTY(x - 1, y - 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]);
-			setcharTTY(x - 0, y + 1, tet_colf[tet_S], tet_colb[tet_S], tet_char[tet_S]);
-		}
-	}
-}
-
-void draw_tet_Z(uint8_t x, uint8_t y, uint8_t r) {
-	if(r == 2) --y;
-	else if(r == 3) ++x;
-	if(scale) { x *= 2; y *= 2; }
-	x += midx; y += midy;
-	if((r & 1) == 0) {
-		if(scale) {
-			setcharTTY(x - 2, y, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 2, y + 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y + 2, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y + 3, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-		}
-		else {
-			setcharTTY(x - 1, y - 0, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y + 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-		}
-	}
-	else {
-		if(scale) {
-			setcharTTY(x - 2, y, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 2, y + 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setchar_noptTTY(tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y - 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y - 2, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 2, y + 2, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 2, y + 3, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-		}
-		else {
-			setcharTTY(x - 1, y - 0, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]); setchar_noptTTY(tet_char[tet_Z]);
-			setcharTTY(x - 0, y - 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]);
-			setcharTTY(x - 1, y + 1, tet_colf[tet_Z], tet_colb[tet_Z], tet_char[tet_Z]);
-		}
-	}
-}
-*/
